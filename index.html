@@ -1,86 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Caballito de Batata Player</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caballito de Batata - Player</title>
+
 <style>
 body{
-  background:#111;
-  font-family:Tahoma, sans-serif;
+  background:#0d001a;
+  font-family: monospace;
+  color:#d8b4ff;
   display:flex;
   justify-content:center;
-  padding:30px;
+  align-items:center;
+  height:100vh;
+  margin:0;
 }
 
 .player{
-  width:340px;
-  background:linear-gradient(#2a2a2a,#000);
-  border:2px solid #777;
-  box-shadow:0 0 20px #000;
-  color:#0f0;
+  background:#1a0033;
+  border:3px solid #a855f7;
+  box-shadow:0 0 20px #7e22ce;
+  padding:20px;
+  width:320px;
 }
 
-.header{
-  background:#000;
-  padding:6px;
-  font-size:12px;
-  color:#0f0;
+h1{
+  font-size:16px;
   text-align:center;
+  color:#c084fc;
+  margin-bottom:15px;
+}
+
+button{
+  width:100%;
+  padding:10px;
+  background:#7e22ce;
+  border:none;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+  margin-bottom:10px;
+}
+
+button:hover{
+  background:#a855f7;
+}
+
+select{
+  width:100%;
+  margin-bottom:10px;
+  background:#2e1065;
+  color:white;
+  border:none;
+  padding:5px;
 }
 
 canvas{
   width:100%;
-  height:100px;
-  background:#000;
+  height:60px;
+  background:#0d001a;
+  margin-top:10px;
 }
 
-.controls{
-  display:flex;
-  justify-content:space-around;
-  padding:6px;
-}
-
-button{
-  background:#333;
-  border:1px solid #888;
-  color:#0f0;
-  padding:4px 8px;
-  cursor:pointer;
-}
-
-button:hover{
-  background:#555;
-}
-
-ul{
-  list-style:none;
-  margin:0;
-  padding:6px;
-  background:#111;
-  max-height:180px;
-  overflow:auto;
-}
-
-li{
-  padding:4px;
-  cursor:pointer;
-  font-size:13px;
-}
-
-li:hover{
-  background:#222;
-}
-
-.active{
-  background:#003300;
-}
-
-a.download{
-  color:#0f0;
-  font-size:12px;
-  display:block;
-  text-align:center;
-  padding:4px;
+.volume{
+  width:100%;
 }
 </style>
 </head>
@@ -88,114 +72,77 @@ a.download{
 <body>
 
 <div class="player">
-  <div class="header">Caballito de Batata</div>
+  <h1>Caballito de Batata</h1>
+
+  <select id="trackSelect">
+    <option value="LINK_DEL_CAP_1">Capítulo 1</option>
+    <option value="LINK_DEL_CAP_2">Capítulo 2</option>
+  </select>
+
+  <button onclick="togglePlay()">PLAY / PAUSE</button>
+
+  <input class="volume" type="range" min="0" max="1" step="0.01" value="1" onchange="setVolume(this.value)">
 
   <canvas id="visualizer"></canvas>
 
-  <audio id="audio"></audio>
-
-  <div class="controls">
-    <button onclick="prev()">⏮</button>
-    <button onclick="toggle()">▶</button>
-    <button onclick="next()">⏭</button>
-  </div>
-
-  <a id="download" class="download" target="_blank">Descargar episodio</a>
-
-  <ul id="playlist"></ul>
+  <audio id="audio" crossorigin="anonymous"></audio>
 </div>
 
 <script>
-let tracks=[];
-let current=0;
-const audio=document.getElementById("audio");
-const playlist=document.getElementById("playlist");
-const download=document.getElementById("download");
+const audio = document.getElementById("audio");
+const select = document.getElementById("trackSelect");
 
-fetch("tracks.json")
-.then(res=>res.json())
-.then(data=>{
-  tracks=data;
-  renderPlaylist();
-  load(0);
+audio.src = select.value;
+
+select.addEventListener("change", () => {
+  audio.src = select.value;
+  audio.play().catch(()=>{});
 });
 
-function renderPlaylist(){
-  playlist.innerHTML="";
-  tracks.forEach((t,i)=>{
-    const li=document.createElement("li");
-    li.textContent=t.title;
-    li.onclick=()=>{load(i);audio.play();}
-    playlist.appendChild(li);
-  });
-}
-
-function load(i){
-  current=i;
-  audio.src=tracks[i].url;
-  download.href=tracks[i].url;
-  download.download=tracks[i].title+".mp3";
-  highlight();
-}
-
-function highlight(){
-  document.querySelectorAll("li").forEach((li,i)=>{
-    li.classList.toggle("active",i===current);
-  });
-}
-
-function toggle(){
-  if(audio.paused){audio.play();}
-  else{audio.pause();}
-}
-
-function next(){
-  current=(current+1)%tracks.length;
-  load(current);
-  audio.play();
-}
-
-function prev(){
-  current=(current-1+tracks.length)%tracks.length;
-  load(current);
-  audio.play();
-}
-
-/* Visualizer */
-let audioCtx, analyser, dataArray;
-
-audio.addEventListener("play",()=>{
-  if(!audioCtx){
-    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    analyser=audioCtx.createAnalyser();
-    const src=audioCtx.createMediaElementSource(audio);
-    src.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    analyser.fftSize=128;
-    dataArray=new Uint8Array(analyser.frequencyBinCount);
-    draw();
+function togglePlay(){
+  if(audio.paused){
+    audio.play().catch(()=>alert("No se pudo reproducir el audio."));
+  } else {
+    audio.pause();
   }
-});
+}
 
-const canvas=document.getElementById("visualizer");
-const ctx=canvas.getContext("2d");
-canvas.width=340;
-canvas.height=100;
+function setVolume(val){
+  audio.volume = val;
+}
+
+/* Visualizador simple 8bit */
+const canvas = document.getElementById("visualizer");
+const ctx = canvas.getContext("2d");
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const analyser = audioCtx.createAnalyser();
+const source = audioCtx.createMediaElementSource(audio);
+
+source.connect(analyser);
+analyser.connect(audioCtx.destination);
+
+analyser.fftSize = 64;
+const bufferLength = analyser.frequencyBinCount;
+const dataArray = new Uint8Array(bufferLength);
 
 function draw(){
   requestAnimationFrame(draw);
   analyser.getByteFrequencyData(dataArray);
-  ctx.fillStyle="#000";
+
+  ctx.fillStyle = "#0d001a";
   ctx.fillRect(0,0,canvas.width,canvas.height);
-  const barWidth=(canvas.width/dataArray.length)*2;
-  let x=0;
-  for(let i=0;i<dataArray.length;i++){
-    const h=dataArray[i]/2;
-    ctx.fillStyle="rgb(0,"+(150+h)+",0)";
-    ctx.fillRect(x,canvas.height-h,barWidth,h);
-    x+=barWidth+1;
+
+  const barWidth = canvas.width / bufferLength;
+
+  for(let i=0;i<bufferLength;i++){
+    const barHeight = dataArray[i] / 3;
+    ctx.fillStyle = "#a855f7";
+    ctx.fillRect(i*barWidth, canvas.height - barHeight, barWidth - 2, barHeight);
   }
 }
+
+draw();
 </script>
 
 </body>
